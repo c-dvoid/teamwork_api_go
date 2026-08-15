@@ -1,0 +1,54 @@
+services:
+  tasks-mysql:
+    image: mysql:8.4
+    container_name: tasks-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tasks-mysql-migrate:
+    image: migrate/migrate:v4.19.1
+    volumes:
+      - ./migrations:/migrations
+    env_file:
+      - .env
+    command: ["-path", "/migrations", "-database", "${DATABASE_URL}", "up"]
+    depends_on:
+      tasks-mysql:
+        condition: service_healthy
+
+  tasks-redis:
+    image: redis:8.0-alpine
+    container_name: tasks-redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  port-forwarder:
+    image: alpine/socat:1.8.0.3
+    container_name: tasks-mysql-port-forwarder
+    command: tcp-listen:3306,fork,reuseaddr tcp-connect:tasks-mysql:3306
+    ports:
+      - "127.0.0.1:3306:3306"
+    depends_on:
+      tasks-mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  redis-data:
