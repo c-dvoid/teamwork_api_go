@@ -2,10 +2,10 @@ include .env
 export
 
 env-up:
-	@docker compose up -d tasks-mysql tasks-redis
+	@docker compose up -d tasks-mysql tasks-redis tasks-app
 
 env-down:
-	@docker compose down tasks-mysql tasks-redis
+	@docker compose down tasks-mysql tasks-redis tasks-app
 
 env-cleanup:
 	@docker compose down -v
@@ -26,4 +26,4 @@ migrate-down:
 	@docker compose run --rm tasks-mysql-migrate -path /migrations -database ${DATABASE_URL} down 1
 
 run:
-	@set LOGGER_FOLDER=out\logs&&set POSTGRES_HOST=localhost&&go mod tidy &&go run cmd/tasks/main.go
+	@set LOGGER_FOLDER=out\logs&&go mod tidy &&go run cmd/tasks/main.go

@@ -39,6 +39,36 @@ services:
       timeout: 5s
       retries: 5
 
+  tasks-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tasks-app
+    environment:
+      - MYSQL_HOST=tasks-mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - REDIS_HOST=tasks-redis
+      - REDIS_PORT=6379
+      - APP_PORT=8080
+      - APP_JWT_SECRET=${APP_JWT_SECRET}
+      - APP_JWT_TTL=${APP_JWT_TTL}
+      - APP_SHUTDOWN_TIMEOUT=${APP_SHUTDOWN_TIMEOUT}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - LOGGER_FOLDER=/app/out/logs
+    ports:
+      - "8080:8080"
+    depends_on:
+      tasks-mysql:
+        condition: service_healthy
+      tasks-redis:
+        condition: service_healthy
+      tasks-mysql-migrate:
+        condition: service_completed_successfully
+    restart: on-failure
+
   port-forwarder:
     image: alpine/socat:1.8.0.3
     container_name: tasks-mysql-port-forwarder
