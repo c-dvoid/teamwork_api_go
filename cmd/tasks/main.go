@@ -12,8 +12,11 @@ import (
 	core_mysql_conn "github.com/c-dvoid/teamwork_api_go/internal/core/repository/mysql/conn"
 	core_redis_conn "github.com/c-dvoid/teamwork_api_go/internal/core/repository/redis/conn"
 	core_http_config "github.com/c-dvoid/teamwork_api_go/internal/core/transport/http/config"
-	core_http_router "github.com/c-dvoid/teamwork_api_go/internal/core/transport/http/router.go"
+	core_http_router "github.com/c-dvoid/teamwork_api_go/internal/core/transport/http/router"
 	core_http_server "github.com/c-dvoid/teamwork_api_go/internal/core/transport/http/server"
+	auth_repository_mysql "github.com/c-dvoid/teamwork_api_go/internal/features/auth/repository/mysql"
+	auth_service "github.com/c-dvoid/teamwork_api_go/internal/features/auth/service"
+	auth_transport_http "github.com/c-dvoid/teamwork_api_go/internal/features/auth/transport/http"
 )
 
 func main() {
@@ -39,6 +42,10 @@ func main() {
 	defer redisPool.Close()
 	log.Info("redis connected")
 
+	authRepo := auth_repository_mysql.NewAuthRepository(mysqlPool.DB)
+	authService := auth_service.NewAuthService(authRepo, httpCfg.JWTSecret, httpCfg.JWTTTL)
+	authHandler := auth_transport_http.NewAuthHTTPHandler(authService)
+
 	r := core_http_router.NewRouter(log)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +53,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	authHandler.RegisterRoutes(r)
 
 	server := core_http_server.NewServer(httpCfg, log, r)
 
